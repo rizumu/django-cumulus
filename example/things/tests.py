@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from cumulus.settings import CUMULUS
 from cumulus.storage import SwiftclientStorage
-from cumulus.tests.models import Thing
+from things.models import Thing
 
 
 openstack_storage = SwiftclientStorage()

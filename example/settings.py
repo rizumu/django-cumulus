@@ -119,8 +119,8 @@ INSTALLED_APPS = (
     'django.contrib.admin',
 
     'cumulus',
-    'cumulus.tests',
 
+    'things',
     'photos',
 )
 

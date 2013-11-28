@@ -121,7 +121,6 @@ INSTALLED_APPS = (
     'cumulus',
 
     'things',
-    'photos',
 )
 
 # A sample logging configuration. The only tangible logging

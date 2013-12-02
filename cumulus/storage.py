@@ -81,6 +81,11 @@ class SwiftclientStorage(Storage):
         if CUMULUS["USE_PYRAX"]:
             if CUMULUS["PYRAX_IDENTITY_TYPE"]:
                 pyrax.set_setting("identity_type", CUMULUS["PYRAX_IDENTITY_TYPE"])
+            if CUMULUS["AUTH_URL"]:
+                pyrax.set_setting("auth_endpoint", CUMULUS["AUTH_URL"])
+            if CUMULUS["AUTH_TENANT_ID"]:
+                pyrax.set_setting("tenant_id", CUMULUS["AUTH_TENANT_ID"])
+
             pyrax.set_credentials(self.username, self.api_key)
 
     def __getstate__(self):
@@ -341,7 +346,7 @@ class SwiftclientStorageFile(File):
         """
         Reads specified chunk_size or the whole file if chunk_size is None.
 
-        If reading the whole file and the content-encoding is gzip, also 
+        If reading the whole file and the content-encoding is gzip, also
         gunzip the read content.
         """
         if self._pos == self._get_size() or chunk_size == 0:
@@ -349,7 +354,7 @@ class SwiftclientStorageFile(File):
 
         if chunk_size < 0:
             meta, data = self.file.get(include_meta=True)
-            if meta.get('content-encoding', None) == 'gzip':
+            if meta.get("content-encoding", None) == "gzip":
                 zbuf = StringIO(data)
                 zfile = GzipFile(mode="rb", fileobj=zbuf)
                 data = zfile.read()

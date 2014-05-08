@@ -229,7 +229,7 @@ class Command(NoArgsCommand):
             self.conn.put_object(
                 container=self.container_name,
                 obj=cloud_filename,
-                content=content,
+                contents=content,
                 content_length=size,
                 etag=None,
                 content_type=content_type,

@@ -331,8 +331,6 @@ class SwiftclientStaticStorage(SwiftclientStorage):
 
 
 class SwiftclientStorageFile(File):
-    closed = False
-
     def __init__(self, storage, name, *args, **kwargs):
         self._storage = storage
         self._pos = 0
@@ -396,21 +394,8 @@ class SwiftclientStorageFile(File):
             chunk_size = self.DEFAULT_CHUNK_SIZE
         return self.file.get(chunk_size=chunk_size)
 
-    def open(self, *args, **kwargs):
-        """
-        Opens the cloud file object.
-        """
-        self._pos = 0
-
     def close(self, *args, **kwargs):
-        self._pos = 0
-
-    @property
-    def closed(self):
-        return not hasattr(self, "_file")
-
-    def seek(self, pos):
-        self._pos = pos
+        self.file.close()
 
 
 class ThreadSafeSwiftclientStorage(SwiftclientStorage):

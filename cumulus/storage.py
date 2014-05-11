@@ -334,8 +334,8 @@ class SwiftclientStorageFile(File):
     def __init__(self, storage, name, *args, **kwargs):
         self._storage = storage
         self._pos = 0
-        super(SwiftclientStorageFile, self).__init__(file=None, name=name,
-                                                     *args, **kwargs)
+        self.name = name
+        self.file = StringIO()
 
     @property
     def size(self):
@@ -353,15 +353,18 @@ class SwiftclientStorageFile(File):
         if self._pos == self.size or chunk_size == 0:
             return ""
         if chunk_size < 0:
-            meta, data = self.file.get(include_meta=True)
+            meta, data = self._storage._get_object(self.name).get(include_meta=True)
             if meta.get("content-encoding", None) == "gzip":
                 zbuf = StringIO(data)
                 zfile = GzipFile(mode="rb", fileobj=zbuf)
                 data = zfile.read()
         else:
-            data = self.file.get(chunk_size=chunk_size).next()
+            if not hasattr(self, "chunk_iterator"):
+                self.chunk_iterator = self._storage._get_object(self.name).get(chunk_size=chunk_size)
+            data = self.chunk_iterator.next()
         self._pos += len(data)
-        return data
+        self.file = StringIO(data)
+        return self.file.getvalue()
 
     def chunks(self, chunk_size=None):
         """

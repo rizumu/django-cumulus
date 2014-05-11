@@ -337,33 +337,11 @@ class SwiftclientStorageFile(File):
         super(SwiftclientStorageFile, self).__init__(file=None, name=name,
                                                      *args, **kwargs)
 
-    def _get_pos(self):
-        return self._pos
-
-    def _get_size(self):
+    @property
+    def size(self):
         if not hasattr(self, "_size"):
             self._size = self._storage.size(self.name)
         return self._size
-
-    def _set_size(self, size):
-        self._size = size
-
-    size = property(_get_size, _set_size)
-
-    def _get_file(self):
-        if not hasattr(self, "_file"):
-            self._file = self._storage._get_object(self.name)
-            self._file.tell = self._get_pos
-        return self._file
-
-    def _set_file(self, value):
-        if value is None:
-            if hasattr(self, "_file"):
-                del self._file
-        else:
-            self._file = value
-
-    file = property(_get_file, _set_file)
 
     def read(self, chunk_size=-1):
         """
@@ -372,9 +350,8 @@ class SwiftclientStorageFile(File):
         If reading the whole file and the content-encoding is gzip, also
         gunzip the read content.
         """
-        if self._pos == self._get_size() or chunk_size == 0:
+        if self._pos == self.size or chunk_size == 0:
             return ""
-
         if chunk_size < 0:
             meta, data = self.file.get(include_meta=True)
             if meta.get("content-encoding", None) == "gzip":

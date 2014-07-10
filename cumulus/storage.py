@@ -180,7 +180,7 @@ class SwiftclientStorage(Storage):
     container = property(_get_container, _set_container)
 
     def _get_container_url(self):
-        public_container_uri = cache.get('cloud_public_container_uri')
+        public_container_uri = cache.get('uri-' + self.container_name)
         if not public_container_uri:
             if self.use_ssl and self.container_ssl_uri:
                 self._container_public_uri = self.container_ssl_uri
@@ -193,7 +193,7 @@ class SwiftclientStorage(Storage):
             if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
                 self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
             public_container_uri = self._container_public_uri
-            cache.set('cloud_public_container_uri', public_container_uri)
+            cache.set('uri-' + self.container_name, public_container_uri)
         return public_container_uri
 
     container_url = property(_get_container_url)

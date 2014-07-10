@@ -11,6 +11,7 @@ except ImportError:
 
 from django.core.files.base import File, ContentFile
 from django.core.files.storage import Storage
+from django.core.cache import cache
 
 from cumulus.settings import CUMULUS
 
@@ -179,17 +180,21 @@ class SwiftclientStorage(Storage):
     container = property(_get_container, _set_container)
 
     def _get_container_url(self):
-        if self.use_ssl and self.container_ssl_uri:
-            self._container_public_uri = self.container_ssl_uri
-        elif self.use_ssl:
-            self._container_public_uri = self.container.cdn_ssl_uri
-        elif self.container_uri:
-            self._container_public_uri = self.container_uri
-        else:
-            self._container_public_uri = self.container.cdn_uri
-        if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
-            self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
-        return self._container_public_uri
+        public_container_uri = cache.get('cloud_public_container_uri')
+        if not public_container_uri:
+            if self.use_ssl and self.container_ssl_uri:
+                self._container_public_uri = self.container_ssl_uri
+            elif self.use_ssl:
+                self._container_public_uri = self.container.cdn_ssl_uri
+            elif self.container_uri:
+                self._container_public_uri = self.container_uri
+            else:
+                self._container_public_uri = self.container.cdn_uri
+            if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
+                self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
+            public_container_uri = self._container_public_uri
+            cache.set('cloud_public_container_uri', public_container_uri)
+        return public_container_uri
 
     container_url = property(_get_container_url)
 
@@ -264,7 +269,11 @@ class SwiftclientStorage(Storage):
         """
         Returns the total size, in bytes, of the file specified by name.
         """
-        return self._get_object(name).total_bytes
+        file_object = self._get_object(name)
+        if file_object:
+            return file_object.total_bytes
+        else:
+            return 0
 
     def url(self, name):
         """

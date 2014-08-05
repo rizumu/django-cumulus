@@ -4,6 +4,8 @@ try:
 except ImportError:
     pass
 
+from django.utils.functional import cached_property
+
 from cumulus.settings import CUMULUS
 
 
@@ -67,7 +69,7 @@ class Auth(object):
     def _set_connection(self, value):
         self._connection = value
 
-    connection = property(_get_connection, _set_connection)
+    connection = cached_property(_get_connection, _set_connection)
 
     def __getstate__(self):
         """
@@ -104,7 +106,7 @@ class Auth(object):
                 delattr(self, "_container_public_uri")
         self._container = container
 
-    container = property(_get_container, _set_container)
+    container = cached_property(_get_container, _set_container)
 
     def _get_container_url(self):
         if self.use_ssl and self.container_ssl_uri:
@@ -119,7 +121,7 @@ class Auth(object):
             self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
         return self._container_public_uri
 
-    container_url = property(_get_container_url)
+    container_url = cached_property(_get_container_url)
 
     def _get_object(self, name):
         """

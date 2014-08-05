@@ -66,7 +66,6 @@ class Auth(object):
                 )
         return self._connection
 
-    @cached_property
     def _set_connection(self, value):
         self._connection = value
 
@@ -95,7 +94,6 @@ class Auth(object):
                 self._container = None
         return self._container
 
-    @cached_property
     def _set_container(self, container):
         """
         Sets the container (and, if needed, the configured TTL on it), making
@@ -111,7 +109,7 @@ class Auth(object):
     container = property(_get_container, _set_container)
 
     @cached_property
-    def _get_container_url(self):
+    def container_url(self):
         if self.use_ssl and self.container_ssl_uri:
             self._container_public_uri = self.container_ssl_uri
         elif self.use_ssl:
@@ -123,8 +121,6 @@ class Auth(object):
         if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
             self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
         return self._container_public_uri
-
-    container_url = property(_get_container_url)
 
     def _get_object(self, name):
         """

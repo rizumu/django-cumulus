@@ -10,6 +10,7 @@ except ImportError:
 
 from django.core.files.base import File, ContentFile
 from django.core.files.storage import Storage
+from django.core.cache import cache
 
 from cumulus.authentication import Auth
 from cumulus.settings import CUMULUS
@@ -88,12 +89,132 @@ class SwiftclientStorage(Auth, Storage):
     ttl = CUMULUS["TTL"]
     file_ttl = CUMULUS["FILE_TTL"]
     use_ssl = CUMULUS["USE_SSL"]
+    use_pyrax = CUMULUS["USE_PYRAX"]
+
+    def __init__(self, username=None, api_key=None, container=None,
+                 connection_kwargs=None, container_uri=None):
+        """
+        Initializes the settings for the connection and container.
+        """
+        if username is not None:
+            self.username = username
+        if api_key is not None:
+            self.api_key = api_key
+        if container is not None:
+            self.container_name = container
+        if connection_kwargs is not None:
+            self.connection_kwargs = connection_kwargs
+        # connect
+        if CUMULUS["USE_PYRAX"]:
+            if CUMULUS["PYRAX_IDENTITY_TYPE"]:
+                pyrax.set_setting("identity_type", CUMULUS["PYRAX_IDENTITY_TYPE"])
+            if CUMULUS["AUTH_URL"]:
+                pyrax.set_setting("auth_endpoint", CUMULUS["AUTH_URL"])
+            if CUMULUS["AUTH_TENANT_ID"]:
+                pyrax.set_setting("tenant_id", CUMULUS["AUTH_TENANT_ID"])
+
+            pyrax.set_credentials(self.username, self.api_key)
+
+    def __getstate__(self):
+        """
+        Return a picklable representation of the storage.
+        """
+        return {
+            "username": self.username,
+            "api_key": self.api_key,
+            "container_name": self.container_name,
+            "use_snet": self.use_snet,
+            "connection_kwargs": self.connection_kwargs
+        }
+
+    def _get_connection(self):
+        if not hasattr(self, "_connection"):
+            if CUMULUS["USE_PYRAX"]:
+                public = not self.use_snet  # invert
+                self._connection = pyrax.connect_to_cloudfiles(region=self.region,
+                                                               public=public)
+            else:
+                self._connection = swiftclient.Connection(
+                    authurl=CUMULUS["AUTH_URL"],
+                    user=CUMULUS["USERNAME"],
+                    key=CUMULUS["API_KEY"],
+                    snet=CUMULUS["SERVICENET"],
+                    auth_version=CUMULUS["AUTH_VERSION"],
+                    tenant_name=CUMULUS["AUTH_TENANT_NAME"],
+                )
+        return self._connection
+
+    def _set_connection(self, value):
+        self._connection = value
+
+    connection = property(_get_connection, _set_connection)
+
+    def _get_container(self):
+        """
+        Gets or creates the container.
+        """
+        if not hasattr(self, "_container"):
+            if CUMULUS["USE_PYRAX"]:
+                self._container = self.connection.create_container(self.container_name)
+            else:
+                self._container = None
+        return self._container
+
+    def _set_container(self, container):
+        """
+        Sets the container (and, if needed, the configured TTL on it), making
+        the container publicly available.
+        """
+        if CUMULUS["USE_PYRAX"]:
+            if container.cdn_ttl != self.ttl or not container.cdn_enabled:
+                container.make_public(ttl=self.ttl)
+            if hasattr(self, "_container_public_uri"):
+                delattr(self, "_container_public_uri")
+        self._container = container
+
+    container = property(_get_container, _set_container)
+
+    def _get_container_url(self):
+        public_container_uri = cache.get('uri-' + self.container_name)
+        if not public_container_uri:
+            if self.use_ssl and self.container_ssl_uri:
+                self._container_public_uri = self.container_ssl_uri
+            elif self.use_ssl:
+                self._container_public_uri = self.container.cdn_ssl_uri
+            elif self.container_uri:
+                self._container_public_uri = self.container_uri
+            else:
+                self._container_public_uri = self.container.cdn_uri
+            if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
+                self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
+            public_container_uri = self._container_public_uri
+            cache.set('uri-' + self.container_name, public_container_uri)
+        return public_container_uri
+
+    container_url = property(_get_container_url)
+
+    def _get_object(self, name):
+        """
+        Helper function to retrieve the requested Object.
+        """
+        try:
+            return self.container.get_object(name)
+        except pyrax.exceptions.NoSuchObject, swiftclient.exceptions.ClientException:
+            return None
 
     def _open(self, name, mode="rb"):
         """
-        Returns the SwiftclientStorageFile.
+        Returns the ContentFile
+
+        We actully dont need the swiftfilestorage object at all. The new
+        client will return back the bytes we need and django's ContentFile
+        will implement what we need and accept the bytes that the client
+        returns.
+
+        This also benefits from returning a real file object so if other
+        libraries need it we can use it.
         """
-        return SwiftclientStorageFile(storage=self, name=name)
+        return ContentFile(self._get_object(name).get())
 
     def _save(self, name, content):
         """
@@ -151,7 +272,11 @@ class SwiftclientStorage(Auth, Storage):
         """
         Returns the total size, in bytes, of the file specified by name.
         """
-        return self._get_object(name).total_bytes
+        file_object = self._get_object(name)
+        if file_object:
+            return file_object.total_bytes
+        else:
+            return 0
 
     def url(self, name):
         """
@@ -215,106 +340,6 @@ class SwiftclientStaticStorage(SwiftclientStorage):
     container_name = CUMULUS["STATIC_CONTAINER"]
     container_uri = CUMULUS["STATIC_CONTAINER_URI"]
     container_ssl_uri = CUMULUS["STATIC_CONTAINER_SSL_URI"]
-
-
-class SwiftclientStorageFile(File):
-    closed = False
-
-    def __init__(self, storage, name, *args, **kwargs):
-        self._storage = storage
-        self._pos = 0
-        self._chunks = None
-        super(SwiftclientStorageFile, self).__init__(file=None, name=name,
-                                                     *args, **kwargs)
-
-    def _get_pos(self):
-        return self._pos
-
-    def _get_size(self):
-        if not hasattr(self, "_size"):
-            self._size = self._storage.size(self.name)
-        return self._size
-
-    def _set_size(self, size):
-        self._size = size
-
-    size = property(_get_size, _set_size)
-
-    def _get_file(self):
-        if not hasattr(self, "_file"):
-            self._file = self._storage._get_object(self.name)
-            self._file.tell = self._get_pos
-        return self._file
-
-    def _set_file(self, value):
-        if value is None:
-            if hasattr(self, "_file"):
-                del self._file
-        else:
-            self._file = value
-
-    file = property(_get_file, _set_file)
-
-    def read(self, chunk_size=None):
-        """
-        Reads specified chunk_size or the whole file if chunk_size is None.
-
-        If reading the whole file and the content-encoding is gzip, also
-        gunzip the read content.
-
-        If chunk_size is provided, the same chunk_size will be used in all
-        further read() calls until the file is reopened or seek() is called.
-        """
-        if self._pos >= self._get_size() or chunk_size == 0:
-            return ""
-
-        if chunk_size is None and self._chunks is None:
-            meta, data = self.file.get(include_meta=True)
-            if meta.get("content-encoding", None) == "gzip":
-                zbuf = StringIO(data)
-                zfile = GzipFile(mode="rb", fileobj=zbuf)
-                data = zfile.read()
-        else:
-            if self._chunks is None:
-                # When reading by chunks, we're supposed to read the whole file
-                # before calling get() again.
-                self._chunks = self.file.get(chunk_size=chunk_size)
-
-            try:
-                data = self._chunks.next()
-            except StopIteration:
-                data = ""
-
-        self._pos += len(data)
-        return data
-
-    def chunks(self, chunk_size=None):
-        """
-        Returns an iterator of file where each chunk has chunk_size.
-        """
-        if not chunk_size:
-            chunk_size = self.DEFAULT_CHUNK_SIZE
-        return self.file.get(chunk_size=chunk_size)
-
-    def open(self, *args, **kwargs):
-        """
-        Opens the cloud file object.
-        """
-        self._pos = 0
-        self._chunks = None
-
-    def close(self, *args, **kwargs):
-        self._pos = 0
-        self._chunks = None
-
-    @property
-    def closed(self):
-        return not hasattr(self, "_file")
-
-    def seek(self, pos):
-        self._pos = pos
-        self._chunks = None
-
 
 class ThreadSafeSwiftclientStorage(SwiftclientStorage):
     """

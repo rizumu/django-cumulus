@@ -1,4 +1,6 @@
 import logging
+import os
+
 import pyrax
 try:
     import swiftclient
@@ -134,4 +136,4 @@ class Auth(object):
         """
         if not hasattr(self, "_container_public_uri") or not self._container_public_uri:
             self._get_container_url()
-        return "{uri}/{name}".format(uri=self._container_public_uri, name=name)
+        return os.path.join(self._container_public_uri, name)

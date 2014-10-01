@@ -133,7 +133,10 @@ class Auth(object):
         Helper function to retrieve the requested Object.
         """
         try:
-            return self.container.get_object(name)
+            if self._container_public_uri:
+                return "{uri}/{name}".format(uri=self._container_public_uri, name=name)
+            else:
+                return self.container.get_object(name)
         except pyrax.exceptions.NoSuchObject:
             return None
         except swiftclient.exceptions.ClientException:

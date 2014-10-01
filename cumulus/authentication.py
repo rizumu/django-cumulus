@@ -3,7 +3,7 @@ import pyrax
 try:
     import swiftclient
 except ImportError:
-    swiftclient = False
+    pass
 
 from cumulus.settings import CUMULUS
 
@@ -132,15 +132,6 @@ class Auth(object):
         """
         Helper function to retrieve the requested Object.
         """
-        if self._container_public_uri:
-            return "{uri}/{name}".format(uri=self._container_public_uri, name=name)
-        elif swiftclient:
-            try:
-                return self.container.get_object(name)
-            except swiftclient.exceptions.ClientException:
-                return None
-        else:
-            try:
-                return self.container.get_object(name)
-            except pyrax.exceptions.NoSuchObject:
-                return None
+        if not hasattr(self, "_container_public_uri") or not self._container_public_uri:
+            self._get_container_url()
+        return "{uri}/{name}".format(uri=self._container_public_uri, name=name)

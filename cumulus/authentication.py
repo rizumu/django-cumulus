@@ -7,6 +7,8 @@ try:
 except ImportError:
     pass
 
+from django.core.cache import cache
+
 from cumulus.settings import CUMULUS
 
 
@@ -116,17 +118,34 @@ class Auth(object):
     container = property(_get_container, _set_container)
 
     def _get_container_url(self):
-        if self.use_ssl and self.container_ssl_uri:
-            self._container_public_uri = self.container_ssl_uri
-        elif self.use_ssl:
-            self._container_public_uri = self.container.cdn_ssl_uri
-        elif self.container_uri:
-            self._container_public_uri = self.container_uri
-        else:
-            self._container_public_uri = self.container.cdn_uri
-        if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
-            self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
-        return self._container_public_uri
+        public_container_uri = cache.get('uri-' + self.container_name)
+        if not public_container_uri:
+            if self.use_ssl and self.container_ssl_uri:
+                self._container_public_uri = self.container_ssl_uri
+            elif self.use_ssl:
+                self._container_public_uri = self.container.cdn_ssl_uri
+            elif self.container_uri:
+                self._container_public_uri = self.container_uri
+            else:
+                self._container_public_uri = self.container.cdn_uri
+            if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
+                self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
+            public_container_uri = self._container_public_uri
+            cache.set('uri-' + self.container_name, public_container_uri)
+        return public_container_uri
+
+
+        # if self.use_ssl and self.container_ssl_uri:
+        #     self._container_public_uri = self.container_ssl_uri
+        # elif self.use_ssl:
+        #     self._container_public_uri = self.container.cdn_ssl_uri
+        # elif self.container_uri:
+        #     self._container_public_uri = self.container_uri
+        # else:
+        #     self._container_public_uri = self.container.cdn_uri
+        # if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
+        #     self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
+        # return self._container_public_uri
 
     container_url = property(_get_container_url)
 
@@ -135,5 +154,5 @@ class Auth(object):
         Helper function to retrieve the requested Object.
         """
         if not hasattr(self, "_container_public_uri") or not self._container_public_uri:
-            self._get_container_url()
+            self._container_public_uri = self._get_container_url()
         return os.path.join(self._container_public_uri, name)

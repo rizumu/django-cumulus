@@ -96,7 +96,7 @@ class SwiftclientStorage(Auth, Storage):
         """
         Returns the SwiftclientStorageFile.
         """
-        return ContentFile(self._get_object(name).get())
+        return ContentFile(self._get_object(name))
 
     def _save(self, name, content):
         """

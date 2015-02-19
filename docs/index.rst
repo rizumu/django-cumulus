@@ -1,5 +1,5 @@
-django-cumulus
-==============
+django-cumulus |version|
+========================
 
 
 ``django-cumulus`` provides a set of tools to utilize the
@@ -12,8 +12,8 @@ can be found on `django-cumulus.readthedocs.org`_.
 The source code for ``django-cumulus`` can be found and contributed to on
 `github.com/django-cumulus/django-cumulus`_. There you can also `file issues`_.
 
-To find out what's new in this version of django-cumulus, please see
-`the changelog`_
+This documentation applies to the version |version| of django-cumulus.
+To find out what's new in this version, please see `the changelog`_
 
 .. toctree::
    :maxdepth: 2
@@ -378,7 +378,7 @@ access webfonts across domains::
 GZIP_CONTENT_TYPES
 ------------------
 
-Set which content types must be gzipped before sent to the cloud:
+Set which content types must be gzipped before sent to the cloud::
 
     CUMULUS = {
         'GZIP_CONTENT_TYPES': ['image/jpeg', 'text/css'],
@@ -444,3 +444,4 @@ To find out what's new in this version of django-cumulus, please see
 .. _the github repo: https://github.com/django-cumulus/django-cumulus
 .. _install tox: http://tox.readthedocs.org/en/latest/index.html
 .. _Rackspace Management Console: https://manage.rackspacecloud.com/APIAccess.do
+.. _django-cumulus.readthedocs.org: http://django-cumulus.readthedocs.org/

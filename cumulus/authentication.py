@@ -1,8 +1,9 @@
+import logging
 import pyrax
 try:
     import swiftclient
 except ImportError:
-    pass
+    swiftclient = None
 
 from django.utils.functional import cached_property
 
@@ -46,7 +47,13 @@ class Auth(object):
             if self.auth_tenant_id:
                 self.pyrax.set_setting("tenant_id", self.auth_tenant_id)
             self.pyrax.set_setting("region", self.region)
-            self.pyrax.set_credentials(self.username, self.api_key)
+            try:
+                self.pyrax.set_credentials(self.username, self.api_key)
+            except:
+                logging.exception(
+                    """Pyrax Connect Error in `django_cumulus.cumulus.authentication.Auth`::
+                           self.pyrax.set_credentials(self.username, self.api_key)
+                    """)
         # else:
         #     headers = {"X-Container-Read": ".r:*"}
         #     self._connection.post_container(self.container_name, headers=headers)
@@ -54,16 +61,19 @@ class Auth(object):
     def _get_connection(self):
         if not hasattr(self, "_connection"):
             if self.use_pyrax:
-                self._connection = pyrax.connect_to_cloudfiles(public=True)
-            else:
+                public = not self.use_snet  # invert
+                self._connection = pyrax.connect_to_cloudfiles(public=public)
+            elif swiftclient:
                 self._connection = swiftclient.Connection(
                     authurl=self.auth_url,
                     user=self.username,
                     key=self.api_key,
-                    snet=self.servicenet,
+                    snet=self.use_snet,
                     auth_version=self.auth_version,
                     tenant_name=self.auth_tenant_name,
                 )
+            else:
+                raise NotImplementedError("Cloud connection is not correctly configured.")
         return self._connection
 
     def _set_connection(self, value):
@@ -126,9 +136,15 @@ class Auth(object):
         """
         Helper function to retrieve the requested Object.
         """
-        try:
+        if self.use_pyrax:
+            try:
+                return self.container.get_object(name)
+            except pyrax.exceptions.NoSuchObject:
+                return None
+        elif swiftclient:
+            try:
+                return self.container.get_object(name)
+            except swiftclient.exceptions.ClientException:
+                return None
+        else:
             return self.container.get_object(name)
-        except pyrax.exceptions.NoSuchObject:
-            return None
-        except swiftclient.exceptions.ClientException:
-            return None

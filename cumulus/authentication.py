@@ -10,7 +10,7 @@ from PIL import Image
 try:
     import swiftclient
 except ImportError:
-    pass
+    swiftclient = None
 
 from django.core.cache import cache
 
@@ -68,16 +68,19 @@ class Auth(object):
     def _get_connection(self):
         if not hasattr(self, "_connection"):
             if self.use_pyrax:
-                self._connection = pyrax.connect_to_cloudfiles(public=True)
-            else:
+                public = not self.use_snet  # invert
+                self._connection = pyrax.connect_to_cloudfiles(public=public)
+            elif swiftclient:
                 self._connection = swiftclient.Connection(
                     authurl=self.auth_url,
                     user=self.username,
                     key=self.api_key,
-                    snet=self.servicenet,
+                    snet=self.use_snet,
                     auth_version=self.auth_version,
                     tenant_name=self.auth_tenant_name,
                 )
+            else:
+                raise NotImplementedError("Cloud connection is not correctly configured.")
         return self._connection
 
     def _set_connection(self, value):

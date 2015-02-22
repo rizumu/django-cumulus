@@ -127,31 +127,24 @@ class Auth(object):
     container = property(_get_container, _set_container)
 
     @cached_property
-    def container_url(self):
+    def container_uri(self):
         if self.use_ssl and self.container_ssl_uri:
-            self._container_public_uri = self.container_ssl_uri
+            container_uri = self.container_ssl_uri
         elif self.use_ssl:
-            self._container_public_uri = self.container.cdn_ssl_uri
-        elif self.container_uri:
-            self._container_public_uri = self.container_uri
+            container_uri = self.container.cdn_ssl_uri
         else:
-            self._container_public_uri = self.container.cdn_uri
-        if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
-            self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
-        return self._container_public_uri
+            container_uri = self.container.cdn_uri
+        if CUMULUS["CNAMES"] and container_uri in CUMULUS["CNAMES"]:
+            container_uri = CUMULUS["CNAMES"][container_uri]
+        return container_uri
 
+    @cached_property
     def _get_object(self, name):
         """
         Helper function to retrieve the requested Object.
         """
-        if not hasattr(self, "_container_public_uri") or not self._container_public_uri:
-            self._container_public_uri = self.container_url
-        image = cache.get(name)
-        if not image:
-            request = requests.get(os.path.join(self._container_public_uri, name))
-            if request.status_code == 200:
-                image = Image.open(StringIO(request.content))
-                cache.set(name, image)
-            else:
-                return None
-        return image
+        request = requests.get(os.path.join(self.container_uri, name))
+        if request.status_code == 200:
+            return Image.open(StringIO(request.content))
+        else:
+            return None

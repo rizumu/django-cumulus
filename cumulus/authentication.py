@@ -13,6 +13,7 @@ except ImportError:
     swiftclient = None
 
 from django.core.cache import cache
+from django.utils.functional import cached_property
 
 from cumulus.settings import CUMULUS
 
@@ -125,31 +126,26 @@ class Auth(object):
 
     container = property(_get_container, _set_container)
 
-    def _get_container_url(self):
-        public_container_uri = cache.get('uri-' + self.container_name)
-        if not public_container_uri:
-            if self.use_ssl and self.container_ssl_uri:
-                self._container_public_uri = self.container_ssl_uri
-            elif self.use_ssl:
-                self._container_public_uri = self.container.cdn_ssl_uri
-            elif self.container_uri:
-                self._container_public_uri = self.container_uri
-            else:
-                self._container_public_uri = self.container.cdn_uri
-            if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
-                self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
-            public_container_uri = self._container_public_uri
-            cache.set("uri-" + self.container_name, public_container_uri)
-        return public_container_uri
-
-    container_url = property(_get_container_url)
+    @cached_property
+    def container_url(self):
+        if self.use_ssl and self.container_ssl_uri:
+            self._container_public_uri = self.container_ssl_uri
+        elif self.use_ssl:
+            self._container_public_uri = self.container.cdn_ssl_uri
+        elif self.container_uri:
+            self._container_public_uri = self.container_uri
+        else:
+            self._container_public_uri = self.container.cdn_uri
+        if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
+            self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
+        return self._container_public_uri
 
     def _get_object(self, name):
         """
         Helper function to retrieve the requested Object.
         """
         if not hasattr(self, "_container_public_uri") or not self._container_public_uri:
-            self._container_public_uri = self._get_container_url()
+            self._container_public_uri = self.container_url
         image = cache.get(name)
         if not image:
             request = requests.get(os.path.join(self._container_public_uri, name))

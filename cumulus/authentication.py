@@ -112,3 +112,20 @@ class Auth(object):
         if CUMULUS["CNAMES"] and container_uri in CUMULUS["CNAMES"]:
             container_uri = CUMULUS["CNAMES"][container_uri]
         return container_uri
+
+    def _get_object(self, name):
+        """
+        Helper function to retrieve the requested Object.
+        """
+        if self.use_pyrax:
+            try:
+                return self.container.get_object(name)
+            except pyrax.exceptions.NoSuchObject:
+                return None
+        elif swiftclient:
+            try:
+                return self.container.get_object(name)
+            except swiftclient.exceptions.ClientException:
+                return None
+        else:
+            return self.container.get_object(name)

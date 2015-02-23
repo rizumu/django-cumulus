@@ -100,7 +100,7 @@ class Command(NoArgsCommand):
     def handle_noargs(self, *args, **options):
         # setup
         self.set_options(options)
-        self._connection = Auth()._get_connection()
+        self._connection = Auth().connection()
         self.container = self._connection.get_container(self.container_name)
 
         # wipe first

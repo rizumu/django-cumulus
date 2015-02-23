@@ -230,15 +230,18 @@ class SwiftclientStorage(CumulusStorage):
     def __init__(self, *args, **kwargs):
         warnings.warn("SwiftclientStorage is deprecated and will be removed in django-cumulus==1.3: \
                        Use CumulusStorage instead.", DeprecationWarning)
+        super(SwiftclientStorage, self).__init__()
 
 
 class SwiftclientStaticStorage(CumulusStaticStorage):
     def __init__(self, *args, **kwargs):
         warnings.warn("SwiftclientStaticStorage is deprecated and will be removed in django-cumulus==1.3: \
                        Use CumulusStaticStorage instead.", DeprecationWarning)
+        super(SwiftclientStaticStorage, self).__init__()
 
 
 class ThreadSafeSwiftclientStorage(CumulusStorage):
     def __init__(self, *args, **kwargs):
         warnings.warn("ThreadSafeSwiftclientStorage is deprecated and will be removed in django-cumulus==1.3: \
                        Use CumulusStorage instead.", DeprecationWarning)
+        super(ThreadSafeSwiftclientStorage, self).__init__()

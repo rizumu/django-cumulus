@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 raise CommandError("Aborted")
 
         print("Connecting")
-        self._connection = Auth()._get_connection()
+        self._connection = Auth().connection()
         container = self._connection.get_container(container_name)
         print("Deleting objects from container {0}".format(container_name))
         container.delete_all_objects()

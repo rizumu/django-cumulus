@@ -14,7 +14,7 @@ class Command(BaseCommand):
         """
         Lists all the items in a container to stdout.
         """
-        self._connection = Auth()._get_connection()
+        self._connection = Auth().connection()
 
         if len(args) == 0:
             containers = self._connection.list_containers()

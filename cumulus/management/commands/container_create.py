@@ -18,7 +18,7 @@ class Command(BaseCommand):
         if len(args) != 1:
             raise CommandError("Pass one and only one [container_name] as an argument")
 
-        self._connection = Auth()._get_connection()
+        self._connection = Auth().connection()
 
         container_name = args[0]
         print("Creating container: {0}".format(container_name))

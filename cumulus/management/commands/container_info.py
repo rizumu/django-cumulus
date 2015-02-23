@@ -17,7 +17,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        self._connection = Auth()._get_connection()
+        self._connection = Auth().connection()
 
         container_names = self._connection.list_container_names()
 

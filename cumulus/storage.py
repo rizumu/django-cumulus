@@ -8,7 +8,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from django.core.files.base import File, ContentFile
+from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 
 from cumulus.authentication import Auth
@@ -86,8 +86,6 @@ class SwiftclientStorage(Auth, Storage):
     """
     default_quick_listdir = True
     container_name = CUMULUS["CONTAINER"]
-    container_uri = CUMULUS["CONTAINER_URI"]
-    container_ssl_uri = CUMULUS["CONTAINER_SSL_URI"]
     ttl = CUMULUS["TTL"]
     file_ttl = CUMULUS["FILE_TTL"]
     use_ssl = CUMULUS["USE_SSL"]
@@ -227,35 +225,8 @@ class SwiftclientStaticStorage(SwiftclientStorage):
     container_ssl_uri = CUMULUS["STATIC_CONTAINER_SSL_URI"]
 
 
-class ThreadSafeSwiftclientStorage(SwiftclientStorage):
-    """
-    Extends SwiftclientStorage to make it mostly thread safe.
-
-    As long as you do not pass container or cloud objects between
-    threads, you will be thread safe.
-
-    Uses one connection/container per thread.
-    """
-    def __init__(self, *args, **kwargs):
-        super(ThreadSafeSwiftclientStorage, self).__init__(*args, **kwargs)
-
-        import threading
-        self.local_cache = threading.local()
-
-    def _get_connection(self):
-        if not hasattr(self.local_cache, "connection"):
-            connection = self._get_connection()
-            self.local_cache.connection = connection
-
-        return self.local_cache.connection
-
-    connection = property(_get_connection, SwiftclientStorage._set_connection)
-
-    def _get_container(self):
-        if not hasattr(self.local_cache, "container"):
-            container = self.connection.create_container(self.container_name)
-            self.local_cache.container = container
-
-        return self.local_cache.container
-
-    container = property(_get_container, SwiftclientStorage._set_container)
+"""
+SwiftclientStorage now caches connection and container, keep
+ThreadSafeSwiftclientStorage importable for backwards compatibility.
+"""
+ThreadSafeSwiftclientStorage = SwiftclientStorage

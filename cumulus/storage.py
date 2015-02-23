@@ -80,9 +80,9 @@ def get_gzipped_contents(input_file):
     return ContentFile(zbuf.getvalue())
 
 
-class SwiftclientStorage(Auth, Storage):
+class CumulusStorage(Auth, Storage):
     """
-    Custom storage for Swiftclient.
+    Custom storage for Cumulus.
     """
     default_quick_listdir = True
     container_name = CUMULUS["CONTAINER"]
@@ -92,13 +92,13 @@ class SwiftclientStorage(Auth, Storage):
 
     def _open(self, name, mode="rb"):
         """
-        Returns the SwiftclientStorageFile.
+        Returns the CumulusStorageFile.
         """
         return ContentFile(self._get_object(name).get())
 
     def _save(self, name, content):
         """
-        Uses the Swiftclient service to write ``content`` to a remote
+        Uses the Cumulus service to write ``content`` to a remote
         file (called ``name``).
         """
         content_type = get_content_type(name, content.file)
@@ -209,16 +209,16 @@ class SwiftclientStorage(Auth, Storage):
         return (dirs, files)
 
 
-class SwiftclientStaticStorage(SwiftclientStorage):
+class CumulusStaticStorage(CumulusStorage):
     """
-    Subclasses SwiftclientStorage to automatically set the container
+    Subclasses CumulusStorage to automatically set the container
     to the one specified in CUMULUS["STATIC_CONTAINER"]. This provides
     the ability to specify a separate storage backend for Django's
     collectstatic command.
 
     To use, make sure CUMULUS["STATIC_CONTAINER"] is set to something other
     than CUMULUS["CONTAINER"]. Then, tell Django's staticfiles app by setting
-    STATICFILES_STORAGE = "cumulus.storage.SwiftclientStaticStorage".
+    STATICFILES_STORAGE = "cumulus.storage.CumulusStaticStorage".
     """
     container_name = CUMULUS["STATIC_CONTAINER"]
     container_uri = CUMULUS["STATIC_CONTAINER_URI"]
@@ -226,7 +226,12 @@ class SwiftclientStaticStorage(SwiftclientStorage):
 
 
 """
-SwiftclientStorage now caches connection and container, keep
-ThreadSafeSwiftclientStorage importable for backwards compatibility.
+Keep the following Swiftclient storage classes around for
+backwards import compatibility.
+
+Cumulus storage now caches authentication, so there is no longer a
+need for the ThreadsafeClass.
 """
-ThreadSafeSwiftclientStorage = SwiftclientStorage
+SwiftclientStorage = CumulusStorage
+SwiftclientStaticStorage = CumulusStaticStorage
+ThreadSafeSwiftclientStorage = CumulusStorage

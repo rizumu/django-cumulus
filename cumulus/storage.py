@@ -1,6 +1,7 @@
 import mimetypes
 import pyrax
 import re
+import warnings
 from gzip import GzipFile
 
 try:
@@ -225,13 +226,19 @@ class CumulusStaticStorage(CumulusStorage):
     container_ssl_uri = CUMULUS["STATIC_CONTAINER_SSL_URI"]
 
 
-"""
-Keep the following Swiftclient storage classes around for
-backwards import compatibility.
+class SwiftclientStorage(CumulusStorage):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("SwiftclientStorage is deprecated and will be removed in django-cumulus==1.3: \
+                       Use CumulusStorage instead.", DeprecationWarning)
 
-Cumulus storage now caches authentication, so there is no longer a
-need for the ThreadsafeClass.
-"""
-SwiftclientStorage = CumulusStorage
-SwiftclientStaticStorage = CumulusStaticStorage
-ThreadSafeSwiftclientStorage = CumulusStorage
+
+class SwiftclientStaticStorage(CumulusStaticStorage):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("SwiftclientStaticStorage is deprecated and will be removed in django-cumulus==1.3: \
+                       Use CumulusStaticStorage instead.", DeprecationWarning)
+
+
+class ThreadSafeSwiftclientStorage(CumulusStorage):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("ThreadSafeSwiftclientStorage is deprecated and will be removed in django-cumulus==1.3: \
+                       Use CumulusStorage instead.", DeprecationWarning)

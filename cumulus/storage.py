@@ -95,7 +95,7 @@ class CumulusStorage(Auth, Storage):
         """
         Returns the CumulusStorageFile.
         """
-        return ContentFile(self._get_object(name).get())
+        return ContentFile(self.container.get_object(name).fetch())
 
     def _save(self, name, content):
         """

@@ -169,6 +169,9 @@ class CumulusStorage(Auth, Storage):
         """
         return "{0}/{1}".format(self.container_uri, name)
 
+    def path(self, name):
+        return self.url(name)
+
     def listdir(self, path):
         """
         Lists the contents of the specified path, returning a 2-tuple;

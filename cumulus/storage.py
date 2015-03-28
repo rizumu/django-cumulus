@@ -1,6 +1,7 @@
 import mimetypes
 import pyrax
 import re
+import warnings
 from gzip import GzipFile
 
 try:
@@ -264,6 +265,22 @@ class ThreadSafeCumulusStorage(CumulusStorage):
     container = property(_get_container, CumulusStorage._set_container)
 
 
-SwiftclientStaticStorage = CumulusStaticStorage
-SwiftclientStorage = CumulusStorage
-ThreadSafeSwiftclientStorage = ThreadSafeCumulusStorage
+class SwiftclientStorage(CumulusStorage):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("SwiftclientStorage is deprecated and will be removed in django-cumulus==1.3: \
+                       Use CumulusStorage instead.", DeprecationWarning)
+        super(SwiftclientStorage, self).__init__()
+
+
+class SwiftclientStaticStorage(CumulusStaticStorage):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("SwiftclientStaticStorage is deprecated and will be removed in django-cumulus==1.3: \
+                       Use CumulusStaticStorage instead.", DeprecationWarning)
+        super(SwiftclientStaticStorage, self).__init__()
+
+
+class ThreadSafeSwiftclientStorage(ThreadSafeCumulusStorage):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("ThreadSafeSwiftclientStorage is deprecated and will be removed in django-cumulus==1.3: \
+                       Use ThreadSafeCumulusStorage instead.", DeprecationWarning)
+        super(ThreadSafeSwiftclientStorage, self).__init__()

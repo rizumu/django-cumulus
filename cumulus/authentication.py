@@ -5,8 +5,6 @@ try:
 except ImportError:
     swiftclient = None
 
-from django.utils.functional import cached_property
-
 from cumulus.settings import CUMULUS
 
 
@@ -118,8 +116,7 @@ class Auth(object):
 
     container = property(_get_container, _set_container)
 
-    @cached_property
-    def container_url(self):
+    def _get_container_url(self):
         if self.use_ssl and self.container_ssl_uri:
             self._container_public_uri = self.container_ssl_uri
         elif self.use_ssl:
@@ -131,6 +128,8 @@ class Auth(object):
         if CUMULUS["CNAMES"] and self._container_public_uri in CUMULUS["CNAMES"]:
             self._container_public_uri = CUMULUS["CNAMES"][self._container_public_uri]
         return self._container_public_uri
+
+    container_url = property(_get_container_url)
 
     def _get_object(self, name):
         """

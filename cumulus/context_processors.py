@@ -1,7 +1,6 @@
 from urlparse import urlparse
 
 from django.conf import settings
-from django.utils.functional import cached_property
 
 from cumulus.storage import CumulusStorage, CumulusStaticStorage
 
@@ -17,7 +16,6 @@ def _get_container_urls(swiftclient_storage):
     return cdn_url, ssl_url
 
 
-@cached_property
 def cdn_url(request):
     """
     A context processor that exposes the full CDN URL in templates.

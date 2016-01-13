@@ -101,17 +101,36 @@ class Auth(object):
         else:
             return None
 
+    def get_cname(self, uri):
+        if not CUMULUS['CNAMES'] or uri not in CUMULUS['CNAMES']:
+            return uri
+
+        return CUMULUS['CNAMES'][uri]
+
     @cached_property
-    def container_uri(self):
-        if self.use_ssl and self.container_ssl_uri:
-            container_uri = self.container_ssl_uri
-        elif self.use_ssl:
-            container_uri = self.container.cdn_ssl_uri
+    def container_cdn_ssl_uri(self):
+        if self.container_ssl_uri:
+            uri = self.container_ssl_uri
         else:
-            container_uri = self.container.cdn_uri
-        if CUMULUS["CNAMES"] and container_uri in CUMULUS["CNAMES"]:
-            container_uri = CUMULUS["CNAMES"][container_uri]
-        return container_uri
+            uri = self.container.cdn_ssl_uri
+
+        return self.get_cname(uri)
+
+    @cached_property
+    def container_cdn_uri(self):
+        if self.container_uri:
+            uri = self.container_uri
+        else:
+            uri = self.container.cdn_uri
+
+        return self.get_cname(uri)
+
+    @property
+    def container_uri(self):
+        if self.use_ssl:
+            return self.container_cdn_ssl_uri
+        else:
+            return self.container_cdn_uri
 
     def _get_object(self, name):
         """
